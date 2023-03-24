@@ -1,11 +1,11 @@
 Package: miniAnalysis
 Type: Package
-Title: What the Package Does (Title Case)
+Title: FUNCTIONS TO BE USED FOR MINIANALYSIS (Title Case)
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: David van Lee
+Maintainer: David van Lee <david.van.lee@student.uva.nl>
+Description: This packages contains functions for the processing of data from individual events,
+    creation of (cumulative) distributions and saving the files.
+License: GPL-3.0-or-later
 Encoding: UTF-8
 LazyData: true
