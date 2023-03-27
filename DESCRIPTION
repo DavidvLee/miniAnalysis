@@ -1,7 +1,7 @@
 Package: miniAnalysis
 Type: Package
 Title: FUNCTIONS TO BE USED FOR MINIANALYSIS (Title Case)
-Version: 0.4.0
+Version: 0.4.1
 Author: David van Lee
 Maintainer: David van Lee <david.van.lee@student.uva.nl>
 Description: This packages contains functions for the processing of data from individual events,
