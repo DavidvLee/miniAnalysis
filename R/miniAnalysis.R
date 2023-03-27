@@ -1,5 +1,5 @@
 ### variables needed
-version_miniAnalysis = 0.4
+version_miniAnalysis = 0.4.1
 
 ### functions
 
@@ -475,7 +475,7 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
   saveWorkbook(wb, new_file_plots, overwrite = TRUE)
 
   print("Analysis is done")
-  return(data_freqs_ampl)
+  # return(data_freqs_ampl)
 
 }
 
