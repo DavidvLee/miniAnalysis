@@ -1,3 +1,6 @@
+### variables needed
+version_miniAnalysis = 0.4
+
 ### functions
 
 # calc peak-peak freq
@@ -34,6 +37,7 @@ calc_peakpeak_freq <- function(table, col_name = 'Peak.to.Peak.Frequency..Hz.') 
 # data retrieval and saving
 data_retrieval <- function(directory_ret, save_file, col_name_ampl = 'Peak.Amp..pA.', col_name_hz = 'Peak.to.Peak.Frequency..Hz.') {
   wb = createWorkbook()
+  addWorksheet(wb, 'Settings')
   addWorksheet(wb, 'Amplitudes')
   addWorksheet(wb, 'Frequencies')
 
@@ -89,7 +93,7 @@ bins_dataframe <- function(n_bins, size_bin) {
 }
 
 # return frequency table
-freq_table <- function(file, sheet, col_name, n_bins, breaks) {
+freq_table <- function(file, sheet, col_name, n_bins, breaks, cut_off = FALSE) {
 
   # Load the data in the sheet
   data_sing_cell = read_excel(file, sheet = sheet)
@@ -108,7 +112,22 @@ freq_table <- function(file, sheet, col_name, n_bins, breaks) {
     j = 1
   }
 
-  data_sing_overflow = ifelse(as.numeric(unlist(data_sing_overflow[,col_num]))*j>n_bins-1, n_bins, as.numeric(unlist(data_sing_overflow[,col_num]))*j) # n_bins is overflow
+  if (cut_off) {
+    i = 1
+    data_updated_cutoff = data.frame(data.frame(matrix(ncol = 1, nrow = 0)))
+    for (row in 1:nrow(data_sing_overflow)) {
+      if (!data_sing_overflow[row,col_num]*j > cut_off) {
+        data_updated_cutoff[i,] = as.numeric(data_sing_overflow[row,col_num])
+        i = i + 1
+      }
+
+    }
+
+    data_sing_overflow = data_updated_cutoff[,1]*j
+
+  } else {
+    data_sing_overflow = ifelse(as.numeric(unlist(data_sing_overflow[,col_num]))*j>n_bins-1, n_bins, as.numeric(unlist(data_sing_overflow[,col_num]))*j) # n_bins is overflow
+  }
 
   # create the frequency table in the freq variable.
   freq = hist(data_sing_overflow, breaks=breaks, include.lowest=TRUE, plot=FALSE)
@@ -244,7 +263,7 @@ plot_cumdistr <- function(data, sheet, n_bins, size_bins) {
 }
 
 # plot the amplitude and freqency histograms/cdfs per cell, condition and overlapping plots
-plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file_plots, col_name_ampl, bins_ampl, col_name_hz, bins_hz, break_point = -1) {
+plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file_plots, col_name_ampl, bins_ampl, col_name_hz, bins_hz, cut_off_ampl = FALSE, cut_off_hz = FALSE, exclude_manual = FALSE, exclude_auto = FALSE, break_point = -1) {
 
   wb = loadWorkbook(file_combined) # load workbook
 
@@ -258,7 +277,7 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
       break
     }
 
-    if (sheet == 'Amplitudes' || sheet == 'Frequencies') {
+    if (sheet == 'Amplitudes' || sheet == 'Frequencies' || sheet == 'Settings') {
       i = 0
 
     } else {
@@ -271,9 +290,8 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
         pharma = 'ACSF'
       }
 
-
       ##### ampl
-      output = freq_table(file_combined, sheet, col_name_ampl, n_bins_ampl, bins_ampl)
+      output = freq_table(file_combined, sheet, col_name_ampl, n_bins_ampl, bins_ampl, cut_off = cut_off_ampl)
 
       info_cells = c(sheet, genotype, pharma)
       output = append(output, info_cells, after=0)
@@ -289,7 +307,7 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
 
       ##### Hz
 
-      output = freq_table(file_combined, sheet, col_name_hz, n_bins_hz, bins_hz)
+      output = freq_table(file_combined, sheet, col_name_hz, n_bins_hz, bins_hz, cut_off = cut_off_hz)
 
       info_cells = c(sheet, genotype, pharma)
 
@@ -316,6 +334,31 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
 
   genotypes = unique(data_freqs_ampl$Genotype)
   pharmas = unique(data_freqs_ampl$Pharmacology)
+
+  # exclusion
+  if (exclude_manual & exclude_auto) {
+    exclusion_manual = data_overview[which(data_overview$Exclude == 'x'),'FileName']
+    exclusion_auto = data_overview[which(data_overview$`Automatic Exclusion` == 'x'),'FileName']
+    data_freqs_ampl = data_freqs_ampl[!(data_freqs_ampl$Cell %in% as.list(exclusion_manual)$FileName) &
+                                        !(data_freqs_ampl$Cell %in% as.list(exclusion_auto)$FileName),]
+    data_freqs_hz = data_freqs_hz[!(data_freqs_hz$Cell %in% as.list(exclusion_manual)$FileName) &
+                                    !(data_freqs_hz$Cell %in% as.list(exclusion_auto)$FileName),]
+
+  } else {
+
+    if (exclude_manual) {
+      exclusion_manual = data_overview[which(data_overview$Exclude == 'x'),'FileName']
+      data_freqs_ampl = data_freqs_ampl[!(data_freqs_ampl$Cell %in% as.list(exclusion_manual)$FileName),]
+      data_freqs_hz = data_freqs_hz[!(data_freqs_hz$Cell %in% as.list(exclusion_manual)$FileName),]
+    }
+    if (exclude_auto) {
+      exclusion_auto = data_overview[which(data_overview$`Automatic Exclusion` == 'x'),'FileName']
+      data_freqs_ampl = data_freqs_ampl[!(data_freqs_ampl$Cell %in% as.list(exclusion_auto)$FileName),]
+      data_freqs_hz = data_freqs_hz[!(data_freqs_hz$Cell %in% as.list(exclusion_auto)$FileName),]
+    }
+
+  }
+
 
   starting_col = 1
   for (genotype in genotypes) {
@@ -390,10 +433,49 @@ plot_histcdf_per_cell <- function(data_overview, file_combined, sheets, new_file
     startRow = 1
   )
 
+  # add settings information
+  date = Sys.Date()
+  version_miniAnalysis = version_miniAnalysis
+  cut_off_frequency = cut_off_hz
+  cut_off_amplitudes = cut_off_ampl
+
+  writeData(wb, 'Settings', 'Date', 1, 1)
+  writeData(wb, 'Settings', date, 2, 1)
+
+  writeData(wb, 'Settings', 'Version', 1, 2)
+  writeData(wb, 'Settings', version_miniAnalysis, 2, 2)
+
+  writeData(wb, 'Settings', 'Amplitudes', 2, 4)
+  writeData(wb, 'Settings', 'Frequencies', 3, 4)
+
+  writeData(wb, 'Settings', 'Number of bins', 1, 5)
+  writeData(wb, 'Settings', n_bins_ampl, 2, 5)
+  writeData(wb, 'Settings', n_bins_hz, 3, 5)
+
+  writeData(wb, 'Settings', 'Size of bins', 1, 6)
+  writeData(wb, 'Settings', size_bins_ampl, 2, 6)
+  writeData(wb, 'Settings', size_bins_hz, 3, 6)
+
+  writeData(wb, 'Settings', 'Cut off', 1, 7)
+  writeData(wb, 'Settings', cut_off_ampl, 2, 7)
+  writeData(wb, 'Settings', cut_off_hz, 3, 7)
+
+  writeData(wb, 'Settings', 'Manual exclusion', 1, 9)
+  writeData(wb, 'Settings', 'Automated exclusion', 1, 10)
+  writeData(wb, 'Settings', exclude_manual, 2, 9)
+  writeData(wb, 'Settings', exclude_auto, 2, 10)
+
+  writeData(wb, 'Settings', 'Dates of patching', 1, 12)
+  writeData(wb, 'Settings', 'First day', 1, 13)
+  writeData(wb, 'Settings', as.numeric(min(data_overview$Date)), 2, 13)
+  writeData(wb, 'Settings', 'Last day', 1, 14)
+  writeData(wb, 'Settings', as.numeric(max(data_overview$Date)), 2, 14)
+
   # save workbook
   saveWorkbook(wb, new_file_plots, overwrite = TRUE)
 
   print("Analysis is done")
+  return(data_freqs_ampl)
 
 }
 
@@ -407,10 +489,14 @@ add_conditional_format <- function(file_plots, new_file, cut_off = 20) {
 
   for (sheet in sheets) {
 
-    if (!sheet == 'Amplitudes' & !sheet == 'Frequencies') {
+    if (!sheet == 'Amplitudes' & !sheet == 'Frequencies' & !sheet == 'Settings') {
 
       data_sheet = read.xlsx(file_plots, sheet)
+      print(sheet)
       rows_cut_off = which(data_sheet[,29] > as.numeric(cut_off))
+
+      print(data_sheet)
+      print(1:ncol(data_sheet))
 
       addStyle(wb, sheet, negStyle, rows_cut_off + 1, cols=1:ncol(data_sheet), gridExpand = TRUE)
 
