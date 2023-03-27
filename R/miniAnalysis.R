@@ -1,5 +1,5 @@
 ### variables needed
-version_miniAnalysis = 0.4.1
+version_miniAnalysis = '0.4.1'
 
 ### functions
 
