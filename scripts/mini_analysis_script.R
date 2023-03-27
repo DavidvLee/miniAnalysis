@@ -40,7 +40,6 @@ col_name_hz = 'Peak.to.Peak.Frequency..Hz.'
 
 # combines the atf files if needed.
 data_retrieval(directory_EventsToXlsx, file_combined)
-add_conditional_format(file_combined, file_combined, cut_off = 20)
 
 # load the sheet names of the file
 sheets = readxl::excel_sheets(file_combined)
