@@ -70,5 +70,11 @@ plot_histcdf_per_cell(data_overview = data_overview,
 
                       col_name_hz = col_name_hz,
                       bins_hz = bins_hz,
+                      
+                      cut_off_ampl = n_bins_ampl-size_bins_ampl,
+                      cut_off_hz = n_bins_hz-size_bins_hz,
 
+                      exclude_manual = TRUE,
+                      exclude_auto = TRUE,
+                      
                       break_point = -1)
